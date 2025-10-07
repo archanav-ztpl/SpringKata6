@@ -1,25 +1,36 @@
 package rest.entities;
 
+import jakarta.persistence.*;
 import lombok.*;
-
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
+import java.util.Objects;
 
 @Getter
 @Setter
 @ToString
 @AllArgsConstructor
-@NoArgsConstructor
-@Builder
-@Entity(name = "users")
+@NoArgsConstructor(access = AccessLevel.PROTECTED) // JPA best practice
+@Builder(toBuilder = true)
+@Table(
+    name = "users",
+    uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"email"})
+    }
+)
+@Entity
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    Long id;
-    String name;
-    String email;
-    String mobile;
-    int age;
+    private Long id;
+
+    @Column(nullable = false, length = 30)
+    private String name;
+
+    @Column(nullable = false, unique = true, length = 100)
+    private String email;
+
+    @Column(nullable = false, unique = true, length = 15)
+    private String mobile;
+
+    @Column(nullable = false)
+    private Integer age;
 }

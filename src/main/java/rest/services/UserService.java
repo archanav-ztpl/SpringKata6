@@ -1,9 +1,13 @@
 package rest.services;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.transaction.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import rest.dtos.UserRequestDTO;
+import rest.dtos.CreateUserDTO;
+import rest.dtos.UserDTO;
 import rest.entities.User;
+import rest.exceptions.UserNotFoundException;
 import rest.repositories.UserRepository;
 
 import java.util.List;
@@ -11,34 +15,59 @@ import java.util.List;
 @Service
 public class UserService {
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
-    public List<User> getUsers() {
-        return userRepository.findAll();
+    public UserService(UserRepository userRepository) {
+        this.userRepository = userRepository;
     }
 
-    public User getUserById(Long id) {
-        return userRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("No user by ID: " + id));
+    public List<UserDTO> getUsers() {
+        List<User> users = userRepository.findAll();
+
+        return users.stream().map(UserDTO::fromEntity).toList();
     }
 
-    public User saveUser(UserRequestDTO userRequest) {
+    public Page<UserDTO> getUsers(Pageable pageable) {
+        return userRepository.findAll(pageable).map(UserDTO::fromEntity);
+    }
+
+    public UserDTO getUserById(Long id) {
+        User user = userRepository.findById(id)
+            .orElseThrow(() -> new UserNotFoundException(id));
+        return UserDTO.fromEntity(user);
+}
+
+    @Transactional
+    public UserDTO saveUser(CreateUserDTO userRequest) {
         User user = User.builder()
             .name(userRequest.getName())
             .email(userRequest.getEmail())
             .mobile(userRequest.getMobile())
             .age(userRequest.getAge())
         .build();
-        return userRepository.save(user);
+
+        User created = userRepository.save(user);
+        return UserDTO.fromEntity(created);
+    }
+
+    public void deleteUserById(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException(id));
+        userRepository.deleteById(user.getId());
     }
 
     public void deleteAllUsers() {
         userRepository.deleteAll();
     }
 
-    public void saveAllUsers(List<User> users) {
-        userRepository.saveAll(users);
+    public void saveAllUsers(List<CreateUserDTO> users) {
+        List<User> userEntities = users.stream().map(userRequest -> User.builder()
+            .name(userRequest.getName())
+            .email(userRequest.getEmail())
+            .mobile(userRequest.getMobile())
+            .age(userRequest.getAge())
+            .build()).toList();
+        userRepository.saveAll(userEntities);
     }
 
 }
