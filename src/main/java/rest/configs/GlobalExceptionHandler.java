@@ -3,11 +3,13 @@ package rest.configs;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.beans.TypeMismatchException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import rest.exceptions.AppException;
 import rest.error.ErrorResponse;
 import rest.error.FieldErrorEntry;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -58,6 +60,29 @@ public class GlobalExceptionHandler {
         logger.error("Unhandled exception: {}", ex.getMessage(), ex);
         ErrorResponse body = build(HttpStatus.INTERNAL_SERVER_ERROR, request.getRequestURI(), "INTERNAL_ERROR", "Unexpected internal server error", null);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
+    }
+
+    @ExceptionHandler(TypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(TypeMismatchException ex, HttpServletRequest request) {
+        logger.error("Type mismatch exception: {}", ex.getMessage(), ex);
+        String message = String.format("Invalid value '%s'. Expected type: %s.",
+                ex.getValue(), ex.getRequiredType() != null ? ex.getRequiredType().getSimpleName() : "unknown");
+        ErrorResponse body = build(HttpStatus.BAD_REQUEST, request.getRequestURI(), "TYPE_MISMATCH", message, null);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
+        String message = "Invalid ID format: " + ex.getValue();
+        ErrorResponse errorResponse = ErrorResponse.of(
+                HttpStatus.BAD_REQUEST.value(),
+                HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                request.getRequestURI(),
+                "TYPE_MISMATCH",
+                message,
+                null
+        );
+        return ResponseEntity.badRequest().body(errorResponse);
     }
 
     private FieldErrorEntry mapConstraintViolation(ConstraintViolation<?> v) {
