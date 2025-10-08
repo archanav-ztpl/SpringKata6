@@ -69,20 +69,5 @@ public class UserService {
         logger.info("User ID: {} deleted", id);
     }
 
-    public void deleteAllUsers() {
-        logger.info("Deleting all users");
-        userRepository.deleteAll();
-    }
-
-    public void saveAllUsers(List<CreateUserDTO> users) {
-        logger.info("Saving multiple users: {}", users);
-        List<User> userEntities = users.stream().map(userRequest -> User.builder()
-            .name(userRequest.getName())
-            .email(userRequest.getEmail())
-            .mobile(userRequest.getMobile())
-            .age(userRequest.getAge())
-            .build()).toList();
-        userRepository.saveAll(userEntities);
-    }
-
 }
+
