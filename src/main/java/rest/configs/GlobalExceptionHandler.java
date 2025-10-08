@@ -21,11 +21,11 @@ import jakarta.validation.ConstraintViolationException;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationErrors(MethodArgumentNotValidException ex, HttpServletRequest request) {
-        log.info("Handling MethodArgumentNotValidException with structured handler");
+        logger.error("Validation exception: {}", ex.getMessage(), ex);
         List<FieldErrorEntry> fieldErrors = ex.getBindingResult().getFieldErrors().stream()
                 .map(f -> new FieldErrorEntry(f.getField(), f.getDefaultMessage()))
                 .collect(Collectors.toList());
@@ -35,7 +35,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ErrorResponse> handleConstraintViolations(ConstraintViolationException ex, HttpServletRequest request) {
-        log.info("Handling ConstraintViolationException with structured handler");
+        logger.error("Handling ConstraintViolationException with structured handler");
         List<FieldErrorEntry> fieldErrors = ex.getConstraintViolations().stream()
                 .map(this::mapConstraintViolation)
                 .collect(Collectors.toList());
@@ -45,16 +45,17 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AppException.class)
     public ResponseEntity<ErrorResponse> handleAppException(AppException ex, HttpServletRequest request) {
+        logger.error("AppException occurred: {}", ex.getMessage(), ex);
         HttpStatus status = HttpStatus.resolve(ex.getStatus());
         if (status == null) status = HttpStatus.INTERNAL_SERVER_ERROR;
-        log.info("Handling AppException code={} status={}", ex.getCode(), status.value());
+        logger.info("Handling AppException code={} status={}", ex.getCode(), status.value());
         ErrorResponse body = build(status, request.getRequestURI(), ex.getCode(), ex.getMessage(), null);
         return ResponseEntity.status(status).body(body);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnhandled(Exception ex, HttpServletRequest request) {
-        log.error("Unhandled exception", ex);
+        logger.error("Unhandled exception: {}", ex.getMessage(), ex);
         ErrorResponse body = build(HttpStatus.INTERNAL_SERVER_ERROR, request.getRequestURI(), "INTERNAL_ERROR", "Unexpected internal server error", null);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
     }
